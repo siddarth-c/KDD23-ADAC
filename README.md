@@ -26,6 +26,7 @@ traffic control policies can be built in a data-efficient manner.
 ## Installation
 1. Use the yml file provided in the folder to create a conda environment.
 2. Install [sumo library](https://www.eclipse.org/sumo/) for traffic simulation.
+3. Unzip [TrafQ.zip](https://github.com/siddarth-c/KDD23-ADAC/blob/main/TrafQ.zip) file in the same directory as _gharaffaEnv.py_
 
 ## Data
 

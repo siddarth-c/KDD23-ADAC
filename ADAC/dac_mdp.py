@@ -98,7 +98,7 @@ class dac_policy(object):
         self.diameter = diameter
         assert self.diameter > 0
         self.rmax = self.replay_df['reward'].max()
-        self.alpha = 0.9 # The maximum distance threshold to avoid far-off neighbors
+        self.alpha = 0.8 # The maximum distance threshold to avoid far-off neighbors
 
         self.q_model = q_model
         self.device = device
@@ -201,12 +201,9 @@ class dac_policy(object):
                         tqdm.write(f'Incosistent row: {action}, {state_core_index} for which value: {transitions[action][state_core_index, next_state_core_index]}, df index: {index}')
                     r_i = self.replay_df['reward'][idx]
                     reward = r_i
-                    # Look here !!!
                     if self.cost >= 0: # distance factor from DAC-MDP paper
-                        # DAC
                         reward -= self.cost * d / self.diameter
                     elif self.cost >= -1: # max reward factor
-                        # ADAC
                         reward = reward - max_r * d / self.diameter # normalizing distance before penalizing
                     stat_rewards.append(reward)
                     rewards[state_core_index, action] += alpha * (reward)
@@ -250,13 +247,8 @@ class dac_policy(object):
         
         ## print statistics
         #print(f'Rewards: {rewards}, Transitions: {transitions[0]}')
-        # tqdm.write(f'After building MDP:\n NN distance stats: {stats.describe(stat_distances)}, \n max distance: {stats.describe(stat_max_distance)}, \n NN reward stats: {np.mean(stat_rewards_mean)} +- {np.mean(stat_rewards_std)} and {stats.describe(stat_rewards)}')
-
-        # tqdm.write(f'After building MDP:\n NN distance stats: {stats.describe(stat_distances)}')
-        # tqdm.write(f'max distance: {stats.describe(stat_max_distance)}')
-        # tqdm.write(f'NN reward stats: {np.mean(stat_rewards_mean)} +- {np.mean(stat_rewards_std)}')
-        # tqdm.write(f'{stats.describe(stat_rewards)}')
-
+        tqdm.write(f'After building MDP:\n NN distance stats: {stats.describe(stat_distances)}, \n max distance: {stats.describe(stat_max_distance)}, \n NN reward stats: {np.mean(stat_rewards_mean)} +- {np.mean(stat_rewards_std)} and {stats.describe(stat_rewards)}')
+        
         return [mat.tocsr() for mat in tqdm(transitions)], rewards
         
     def _get_activation(self, name):
@@ -277,7 +269,7 @@ class dac_policy(object):
     
     def get_rewards(self):
         return self.rewards
-
+                            
     def solve_mdp(self):
         vi = mbox.ValueIteration(self.transitions, self.rewards, self.gamma, self.epsilon, max_iter=100, skip_check=True)
         vi.run()
@@ -300,13 +292,10 @@ class dac_policy(object):
             self.action_value_stat.append(self.value[core_idx])
             self.known_policy_stat += 1
         else: # evaluation on non-core state
-            # print('Non state core encountered')
             state_rep = self._get_state_rep(state)
             action_value = []
             max_distance = 0.0 # for stats only
-            # print('Looping through all actions')
             for action in range(self.num_actions):
-                # print(action, 'selected')
                 nn_indexes, nn_distances = self.nn_indexes[action].topn_nn(state_rep, self.k_pi, self.alpha * self.diameter) if self.nn_mode=='number' else self.nn_indexes[action].topd_nn(state_rep, self.k_pi)
                 nn_alphas = self._distance_to_alpha(nn_indexes, nn_distances, -1)
                 ## max reward
@@ -371,9 +360,7 @@ class dac_builder(object):
                  nn_mode = 'number', # 'distance' or 'number' or numeric value passing distance diameter
                  diameter = -1,
                  gamma = 0.96,
-                 epsilon = 0.01,
-                 cost = -0.5,
-                 policy_number = 0
+                 epsilon = 0.01
                 ):
         self.num_actions = num_actions
         #print(f'Called with {state_dim} states and {num_actions} actions')
@@ -408,24 +395,17 @@ class dac_builder(object):
                 )
             )
         elif num_configs == 6:
-            print('DAC happening!!!')
             k = 5
-            combs = []
-
-            for p1 in [10, 100, 1e6]:
-                for p2 in [11, 51]:
-                    combs.append([p1, p2])
-            
-            cost, k_pi = combs[policy_number]
-            
-            self.solvers.append(
-                dac_policy(
-                    num_actions, state_dim, 
-                    self.replay_df, self.core_states, 
-                    q_model, device, self.ann_indexes,
-                    k, cost, k_pi
-                )
-            )
+            for cost in [1, 100, 1e6]:
+                for k_pi in [11, 51]:
+                    self.solvers.append(
+                        dac_policy(
+                            num_actions, state_dim, 
+                            self.replay_df, self.core_states, 
+                            q_model, device, self.ann_indexes,
+                            k, cost, k_pi
+                        )
+                    )
         for solver in tqdm(self.solvers):
             solver.solve_mdp()
 
@@ -438,11 +418,11 @@ class dac_builder(object):
         #tqdm.write(f'replay df before duplicate removal length: {len(replay_df)}, sample: {replay_df.sample(3)}')
         replay_df.drop_duplicates(keep='first', inplace=True)
         #tqdm.write(f'replay df after duplicate removal length: {len(replay_df)}, sample: {replay_df.sample(3)}')
-        ## normalize reward to make them non-negative
-        min_reward = min(replay_df['reward'])
-        if min_reward < 0:
-            tqdm.write(f'replay df rewards are made non-negative by adding constant {-min_reward}')
-            replay_df.loc[:, 'reward'] = replay_df['reward'].apply(lambda v: -min_reward + v)
+        ## normalize reward to make them non-negative
+        min_reward = min(replay_df['reward'])
+        if min_reward < 0:
+            tqdm.write(f'replay df rewards are made non-negative by adding constant {-min_reward}')
+            replay_df.loc[:, 'reward'] = replay_df['reward'].apply(lambda v: -min_reward + v)
 
         return replay_df
     

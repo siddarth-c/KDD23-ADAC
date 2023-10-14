@@ -1,6 +1,6 @@
 # ADAC-traffic
 
-## Offline Model-based Reinforcement Learning for Traffic Signal Control
+## Optimizing Traffic Control with Model-Based Learning: A Pessimistic Approach to Data-Efficient Policy Inference
 
 Traffic signal control is an important problem in urban mobility
 with a significant potential for economic and environmental impact.
@@ -37,3 +37,18 @@ To generate data sets with different sizes and behavioral policy, check the func
 ## Policy building and evaluation
 
 Use the script eval-dac-policies.sh to try out model-based offline RL solutions using the data set provided in folder buffers.
+
+
+## Cite
+
+```
+    @inproceedings{10.1145/3580305.3599459,
+    author = {Kunjir, Mayuresh and Chawla, Sanjay and Chandrasekar, Siddarth and Jay, Devika and Ravindran, Balaraman},
+    title = {Optimizing Traffic Control with Model-Based Learning: A Pessimistic Approach to Data-Efficient Policy Inference},
+    year = {2023},
+    isbn = {9798400701030},
+    publisher = {Association for Computing Machinery},
+    address = {New York, NY, USA},
+    url = {https://doi.org/10.1145/3580305.3599459},
+    doi = {10.1145/3580305.3599459}}
+```
